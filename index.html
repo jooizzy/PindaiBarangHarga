@@ -1,0 +1,1282 @@
+<!DOCTYPE html>
+<html lang="id" class="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Penilai & Pemindai Harga Barang AI</title>
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- FontAwesome Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <!-- Google Fonts: Inter & JetBrains Mono -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;800;900&family=JetBrains+Mono:wght@700;800&display=swap" rel="stylesheet">
+
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', 'sans-serif'],
+            mono: ['JetBrains Mono', 'monospace'],
+          },
+          colors: {
+            neon: {
+              green: '#10b981',
+              cyan: '#06b6d4',
+              accent: '#3b82f6',
+            }
+          },
+          animation: {
+            'scan-line': 'scan 2.5s ease-in-out infinite',
+            'pulse-glow': 'pulseGlow 2s infinite',
+            'bounce-short': 'bounceShort 0.5s ease-out 1',
+          },
+          keyframes: {
+            scan: {
+              '0%, 100%': { top: '5%' },
+              '50%': { top: '90%' },
+            },
+            pulseGlow: {
+              '0%, 100%': { opacity: 1, boxShadow: '0 0 25px rgba(16, 185, 129, 0.6)' },
+              '50%': { opacity: 0.8, boxShadow: '0 0 50px rgba(16, 185, 129, 0.9)' },
+            },
+            bounceShort: {
+              '0%': { transform: 'scale(0.8)', opacity: 0 },
+              '70%': { transform: 'scale(1.05)' },
+              '100%': { transform: 'scale(1)', opacity: 1 },
+            }
+          }
+        }
+      }
+    }
+  </script>
+
+  <style>
+    /* Custom Scrollbar */
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #0f172a;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #334155;
+      border-radius: 4px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: #10b981;
+    }
+
+    /* Glow Text */
+    .glow-text-green {
+      text-shadow: 0 0 20px rgba(16, 185, 129, 0.8), 0 0 40px rgba(16, 185, 129, 0.4);
+    }
+    .glow-box-green {
+      box-shadow: 0 0 30px rgba(16, 185, 129, 0.3);
+    }
+    .glow-box-cyan {
+      box-shadow: 0 0 30px rgba(6, 182, 212, 0.3);
+    }
+  </style>
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen flex flex-col font-sans selection:bg-emerald-500 selection:text-slate-950">
+
+  <!-- TOP HEADER -->
+  <header class="bg-slate-900/90 border-b border-slate-800 sticky top-0 z-40 backdrop-blur-md">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+      <!-- Logo & Title -->
+      <div class="flex items-center space-x-3">
+        <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-emerald-500 to-cyan-500 flex items-center justify-center text-slate-950 font-black text-xl shadow-lg shadow-emerald-500/20">
+          <i class="fa-solid me-0 fa-barcode"></i>
+        </div>
+        <div>
+          <h1 class="font-bold text-lg leading-tight tracking-wide flex items-center gap-2">
+            SCANNER HARGA <span class="text-xs px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-400 font-mono border border-emerald-500/30">AI VISION</span>
+          </h1>
+          <p class="text-xs text-slate-400">Penilai & Pemindai Visual Barang Real-Time</p>
+        </div>
+      </div>
+
+      <!-- Status Indicator -->
+      <div class="hidden sm:flex items-center space-x-4">
+        <div id="camera-status-badge" class="flex items-center space-x-2 bg-slate-800/80 px-3 py-1.5 rounded-full border border-slate-700 text-xs">
+          <span class="w-2.5 h-2.5 rounded-full bg-amber-500 animate-pulse" id="status-dot"></span>
+          <span id="status-text" class="text-slate-300 font-medium">Kamera Mati</span>
+        </div>
+        <button id="toggle-sound-btn" onclick="toggleAudio()" class="p-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 transition-colors" title="Beralih Suara">
+          <i class="fa-solid fa-volume-high text-emerald-400" id="sound-icon"></i>
+        </button>
+      </div>
+    </div>
+
+    <!-- NAVIGATION TABS -->
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 border-t border-slate-800/60">
+      <nav class="flex space-x-2 sm:space-x-6 overflow-x-auto py-2" id="nav-tabs">
+        <button onclick="switchTab('scanner')" id="tab-btn-scanner" class="tab-btn flex items-center gap-2 px-4 py-2 rounded-lg font-medium text-sm transition-all bg-emerald-500/10 text-emerald-400 border border-emerald-500/30">
+          <i class="fa-solid fa-camera-retro"></i>
+          <span>Pindai Real-Time</span>
+        </button>
+        <button onclick="switchTab('register')" id="tab-btn-register" class="tab-btn flex items-center gap-2 px-4 py-2 rounded-lg font-medium text-sm transition-all text-slate-400 hover:text-slate-200 hover:bg-slate-800">
+          <i class="fa-solid fa-circle-plus"></i>
+          <span>Tambah Barang Baru</span>
+        </button>
+        <button onclick="switchTab('database')" id="tab-btn-database" class="tab-btn flex items-center gap-2 px-4 py-2 rounded-lg font-medium text-sm transition-all text-slate-400 hover:text-slate-200 hover:bg-slate-800">
+          <i class="fa-solid fa-boxes-stacked"></i>
+          <span>Database Barang</span>
+          <span id="db-count-badge" class="ml-1 px-1.5 py-0.2 bg-slate-800 text-slate-300 rounded-full text-xs font-mono">0</span>
+        </button>
+      </nav>
+    </div>
+  </header>
+
+  <!-- MAIN CONTAINER -->
+  <main class="flex-1 max-w-7xl w-full mx-auto p-4 sm:p-6 lg:p-8 flex flex-col">
+
+    <!-- ==================== TAB 1: PEMINDAI REAL-TIME ==================== -->
+    <section id="tab-scanner" class="tab-content flex-1 flex flex-col gap-6">
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 flex-1">
+        
+        <!-- Live Camera Viewport (Left 2 cols) -->
+        <div class="lg:col-span-2 bg-slate-900 rounded-2xl border border-slate-800 p-3 sm:p-4 flex flex-col relative overflow-hidden min-h-[420px] shadow-2xl">
+          
+          <!-- Camera Header Bar -->
+          <div class="flex items-center justify-between mb-3 z-10 bg-slate-950/60 p-2.5 rounded-xl border border-slate-800/80 backdrop-blur-sm">
+            <div class="flex items-center gap-2">
+              <span class="inline-flex items-center px-2.5 py-0.5 rounded-md text-xs font-semibold bg-red-500/10 text-red-400 border border-red-500/20">
+                <span class="w-2 h-2 rounded-full bg-red-500 mr-1.5 animate-ping"></span> LIVE STREAM
+              </span>
+              <span id="scanner-resolution" class="text-xs text-slate-400 font-mono hidden sm:inline">640x480</span>
+            </div>
+
+            <!-- Camera Actions -->
+            <div class="flex items-center gap-2">
+              <select id="camera-select" onchange="changeCamera()" class="bg-slate-800 text-xs text-slate-200 border border-slate-700 rounded-lg px-2.5 py-1.5 focus:outline-none focus:border-emerald-500">
+                <option value="">Memuat kamera...</option>
+              </select>
+              <button onclick="flipCamera()" class="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs transition-colors" title="Ganti Depan/Belakang">
+                <i class="fa-solid fa-arrows-rotate"></i>
+              </button>
+            </div>
+          </div>
+
+          <!-- Video Display Container -->
+          <div class="relative flex-1 bg-slate-950 rounded-xl overflow-hidden flex items-center justify-center border border-slate-800/80">
+            <!-- Video Element -->
+            <video id="scanner-video" autoplay playsinline muted class="w-full h-full object-cover"></video>
+            
+            <!-- Target Scanner Overlay Grid -->
+            <div id="scanner-hud" class="absolute inset-0 pointer-events-none flex flex-col items-center justify-center">
+              <!-- Center Targeting Box -->
+              <div class="w-64 h-64 sm:w-80 sm:h-80 border-2 border-emerald-500/40 rounded-2xl relative transition-all duration-300 shadow-[0_0_15px_rgba(16,185,129,0.15)] flex items-center justify-center" id="target-box">
+                <!-- Corner Reticles -->
+                <div class="absolute -top-1 -left-1 w-6 h-6 border-t-4 border-l-4 border-emerald-400 rounded-tl-lg"></div>
+                <div class="absolute -top-1 -right-1 w-6 h-6 border-t-4 border-r-4 border-emerald-400 rounded-tr-lg"></div>
+                <div class="absolute -bottom-1 -left-1 w-6 h-6 border-b-4 border-l-4 border-emerald-400 rounded-bl-lg"></div>
+                <div class="absolute -bottom-1 -right-1 w-6 h-6 border-b-4 border-r-4 border-emerald-400 rounded-br-lg"></div>
+                
+                <!-- Laser Scanning Line -->
+                <div class="absolute inset-x-2 h-0.5 bg-gradient-to-r from-transparent via-emerald-400 to-transparent shadow-[0_0_12px_#10b981] animate-scan-line"></div>
+                
+                <!-- Center Crosshair -->
+                <div class="w-3 h-3 border border-emerald-400/50 rounded-full"></div>
+              </div>
+
+              <p class="mt-4 text-xs font-mono text-emerald-400/80 bg-slate-900/80 px-3 py-1 rounded-full border border-slate-800 backdrop-blur-sm">
+                Arahkan barang ke dalam kotak pemindai
+              </p>
+            </div>
+
+            <!-- GIANT PRICE OVERLAY (Triggered on Detection) -->
+            <div id="giant-price-modal" class="absolute inset-0 z-30 bg-slate-950/85 backdrop-blur-md flex flex-col items-center justify-center p-6 transition-all duration-300 transform scale-95 opacity-0 pointer-events-none">
+              <div class="bg-gradient-to-b from-slate-900 to-slate-950 border-2 border-emerald-500 rounded-3xl p-6 sm:p-10 w-full max-w-lg text-center shadow-[0_0_60px_rgba(16,185,129,0.4)] flex flex-col items-center animate-bounce-short">
+                
+                <!-- Match Badge -->
+                <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 text-xs font-mono mb-3">
+                  <i class="fa-solid fa-check-circle"></i>
+                  <span>BARANG TERDETEKSI (<span id="match-score">0%</span> COCOK)</span>
+                </div>
+
+                <h3 id="detected-item-name" class="text-xl sm:text-2xl font-bold text-slate-100 mb-1 line-clamp-1">
+                  Nama Barang
+                </h3>
+                <p id="detected-item-category" class="text-xs text-slate-400 mb-4 uppercase tracking-widest font-semibold">
+                  KATEGORI
+                </p>
+
+                <!-- RAKSASA / GIANT PRICE TEXT -->
+                <div class="w-full my-2 py-4 px-2 bg-slate-950/80 border border-emerald-500/30 rounded-2xl glow-box-green flex flex-col items-center justify-center">
+                  <span class="text-xs text-emerald-400 font-mono tracking-widest uppercase mb-1">Harga Final</span>
+                  <div id="detected-item-price" class="text-5xl sm:text-7xl font-black text-emerald-400 font-mono tracking-tight glow-text-green">
+                    Rp 0
+                  </div>
+                </div>
+
+                <!-- Footer details inside price card -->
+                <div class="flex items-center justify-between w-full mt-4 text-xs text-slate-400">
+                  <span id="detected-time" class="font-mono">Waktu: -</span>
+                  <button onclick="dismissPriceModal()" class="px-4 py-2 bg-emerald-500 hover:bg-emerald-600 text-slate-950 font-bold rounded-xl transition-colors pointer-events-auto">
+                    Tutup / Pindai Lagi
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <!-- Video Fallback / Camera Off State -->
+            <div id="camera-off-placeholder" class="absolute inset-0 bg-slate-950 flex flex-col items-center justify-center p-6 text-center z-20">
+              <div class="w-16 h-16 rounded-full bg-slate-800 flex items-center justify-center text-slate-500 text-2xl mb-4">
+                <i class="fa-solid fa-camera"></i>
+              </div>
+              <h3 class="font-bold text-lg text-slate-200 mb-1">Kamera Tidak Aktif</h3>
+              <p class="text-xs text-slate-400 max-w-xs mb-4">Izinkan akses kamera pada peramban Anda untuk memulai pemindaian otomatis.</p>
+              <button onclick="startCamera()" class="px-5 py-2.5 bg-emerald-500 hover:bg-emerald-600 text-slate-950 font-bold rounded-xl text-sm transition-all shadow-lg shadow-emerald-500/20 flex items-center gap-2">
+                <i class="fa-solid fa-power-off"></i>
+                <span>Nyalakan Kamera</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Bottom Control Bar -->
+          <div class="mt-4 flex flex-wrap items-center justify-between gap-3">
+            <div class="flex items-center gap-3">
+              <button onclick="triggerManualScan()" class="px-4 py-2.5 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold rounded-xl text-xs sm:text-sm transition-all shadow-lg shadow-emerald-500/20 flex items-center gap-2">
+                <i class="fa-solid fa-bolt"></i>
+                <span>Pindai Instan (Manual)</span>
+              </button>
+              <button onclick="toggleScannerLoop()" id="toggle-scan-loop-btn" class="px-3 py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-200 font-semibold rounded-xl text-xs transition-colors flex items-center gap-2 border border-slate-700">
+                <i class="fa-solid fa-pause text-emerald-400" id="loop-btn-icon"></i>
+                <span id="loop-btn-text">Jeda Pemindaian</span>
+              </button>
+            </div>
+
+            <!-- Sensitivity Control -->
+            <div class="flex items-center gap-2 bg-slate-950 px-3 py-1.5 rounded-xl border border-slate-800">
+              <label for="sensitivity-range" class="text-xs text-slate-400 font-medium">Sensitivitas:</label>
+              <input type="range" id="sensitivity-range" min="50" max="95" value="70" onchange="updateSensitivity(this.value)" class="w-20 sm:w-28 accent-emerald-500 cursor-pointer">
+              <span id="sensitivity-value" class="text-xs font-mono text-emerald-400 font-bold">70%</span>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- Right Side Panel: Scan Log & Quick Match Info -->
+        <div class="bg-slate-900 rounded-2xl border border-slate-800 p-4 flex flex-col justify-between">
+          <div>
+            <div class="flex items-center justify-between pb-3 border-b border-slate-800 mb-3">
+              <h3 class="font-bold text-sm text-slate-200 flex items-center gap-2">
+                <i class="fa-solid fa-clock-rotate-left text-emerald-400"></i>
+                 Riwayat Pemindaian
+              </h3>
+              <button onclick="clearScanLogs()" class="text-xs text-slate-500 hover:text-slate-300">
+                Bersihkan
+              </button>
+            </div>
+
+            <!-- Log Stream Container -->
+            <div id="scan-log-container" class="space-y-2.5 max-h-[360px] overflow-y-auto pr-1">
+              <div class="text-center py-8 text-slate-500 text-xs italic">
+                Belum ada barang yang terdeteksi. Silakan arahkan kamera ke barang terdaftar.
+              </div>
+            </div>
+          </div>
+
+          <!-- Quick Tip Box -->
+          <div class="mt-4 p-3 bg-slate-950/80 rounded-xl border border-slate-800 text-xs text-slate-400 space-y-1">
+            <div class="flex items-center gap-2 text-emerald-400 font-semibold">
+              <i class="fa-solid fa-lightbulb"></i>
+              <span>Tips Pencocokan Cepat</span>
+            </div>
+            <p>Pastikan pencahayaan cukup dan barang berada di tengah kotak pandu. AI menggunakan fitur warna & Gemini Vision untuk mencocokkan.</p>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- ==================== TAB 2: TAMBAH BARANG BARU ==================== -->
+    <section id="tab-register" class="tab-content hidden flex-1 flex flex-col">
+      <div class="max-w-3xl mx-auto w-full bg-slate-900 rounded-2xl border border-slate-800 p-6 shadow-2xl">
+        <div class="border-b border-slate-800 pb-4 mb-6">
+          <h2 class="text-xl font-bold text-slate-100 flex items-center gap-2">
+            <i class="fa-solid fa-camera-rotate text-emerald-400"></i>
+            Pendaftaran & Identifikasi Barang AI
+          </h2>
+          <p class="text-xs text-slate-400 mt-1">
+            Ambil foto barang. Gemini AI Vision akan otomatis menganalisis nama, kategori, dan estimasi harga dalam Rupiah (Rp).
+          </p>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+          
+          <!-- Image Capture Zone -->
+          <div class="flex flex-col gap-3">
+            <label class="text-xs font-semibold text-slate-300 uppercase tracking-wider">
+              1. Tangkap Foto / Upload
+            </label>
+
+            <div class="relative aspect-square bg-slate-950 rounded-xl border-2 border-dashed border-slate-700 overflow-hidden flex flex-col items-center justify-center p-2 group" id="capture-zone">
+              
+              <!-- Live Snapshot Preview or Uploaded Image -->
+              <img id="register-preview-img" class="hidden w-full h-full object-cover rounded-lg" alt="Preview Barang">
+              <video id="register-video" autoplay playsinline muted class="w-full h-full object-cover rounded-lg hidden"></video>
+
+              <!-- Placeholder Instructions -->
+              <div id="register-placeholder" class="text-center p-4">
+                <div class="w-12 h-12 rounded-full bg-slate-800 flex items-center justify-center text-slate-400 text-xl mx-auto mb-2">
+                  <i class="fa-solid fa-image"></i>
+                </div>
+                <p class="text-xs text-slate-300 font-medium">Belum ada foto diambil</p>
+                <p class="text-[10px] text-slate-500 mt-1">Gunakan kamera atau unggah berkas gambar</p>
+              </div>
+
+              <!-- AI Processing Overlay Spinner -->
+              <div id="ai-loading-overlay" class="absolute inset-0 bg-slate-950/85 backdrop-blur-sm hidden flex-col items-center justify-center p-4 text-center z-20">
+                <div class="w-10 h-10 border-4 border-emerald-500/20 border-t-emerald-400 rounded-full animate-spin mb-3"></div>
+                <p class="text-xs font-semibold text-emerald-400 animate-pulse">Mengirim ke AI Gemini...</p>
+                <p class="text-[10px] text-slate-400 mt-1">Menganalisis bentuk, objek, & estimasi harga Rp</p>
+              </div>
+            </div>
+
+            <!-- Capture Actions -->
+            <div class="grid grid-cols-2 gap-2">
+              <button type="button" onclick="takeRegisterSnapshot()" class="px-3 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-xl text-xs font-semibold transition-colors flex items-center justify-center gap-1.5 border border-slate-700">
+                <i class="fa-solid fa-camera text-emerald-400"></i>
+                <span>Ambil Foto</span>
+              </button>
+              <label class="px-3 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-xl text-xs font-semibold transition-colors flex items-center justify-center gap-1.5 border border-slate-700 cursor-pointer text-center">
+                <i class="fa-solid fa-upload text-cyan-400"></i>
+                <span>Unggah Berkas</span>
+                <input type="file" id="file-input" accept="image/*" onchange="handleFileUpload(event)" class="hidden">
+              </label>
+            </div>
+          </div>
+
+          <!-- Item Information Form -->
+          <form id="register-form" onsubmit="saveItemToDatabase(event)" class="flex flex-col justify-between gap-4">
+            <div class="space-y-3">
+              <label class="text-xs font-semibold text-slate-300 uppercase tracking-wider">
+                2. Data & Penilaian AI
+              </label>
+
+              <!-- Item Name -->
+              <div>
+                <label for="item-name" class="block text-xs text-slate-400 mb-1">Nama Barang *</label>
+                <input type="text" id="item-name" required placeholder="Contoh: Botol Minuman Stainless" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-emerald-500">
+              </div>
+
+              <!-- Category -->
+              <div>
+                <label for="item-category" class="block text-xs text-slate-400 mb-1">Kategori *</label>
+                <input type="text" id="item-category" required placeholder="Contoh: Perabot / Alat Tulis" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-emerald-500">
+              </div>
+
+              <!-- Price (Rupiah) -->
+              <div>
+                <label for="item-price" class="block text-xs text-slate-400 mb-1">Harga Final (Rp) *</label>
+                <div class="relative">
+                  <span class="absolute left-3 top-2.5 text-xs text-slate-500 font-mono font-bold">Rp</span>
+                  <input type="number" id="item-price" required min="0" placeholder="150000" class="w-full bg-slate-950 border border-slate-700 rounded-xl pl-10 pr-3 py-2 text-sm text-emerald-400 font-mono font-bold focus:outline-none focus:border-emerald-500">
+                </div>
+                <p id="ai-price-hint" class="text-[10px] text-slate-500 mt-1">Estimasi AI akan muncul setelah analisis foto.</p>
+              </div>
+
+              <!-- Description -->
+              <div>
+                <label for="item-desc" class="block text-xs text-slate-400 mb-1">Deskripsi Singkat</label>
+                <textarea id="item-desc" rows="2" placeholder="Ciri khas visual barang..." class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-xs text-slate-100 focus:outline-none focus:border-emerald-500 resize-none"></textarea>
+              </div>
+            </div>
+
+            <!-- Submit Button -->
+            <button type="submit" id="save-btn" disabled class="w-full py-3 bg-emerald-500 disabled:bg-slate-800 disabled:text-slate-600 hover:bg-emerald-400 text-slate-950 font-bold rounded-xl text-sm transition-all shadow-lg shadow-emerald-500/20 flex items-center justify-center gap-2">
+              <i class="fa-solid fa-floppy-disk"></i>
+              <span>Simpan Ke Database Katalog</span>
+            </button>
+          </form>
+
+        </div>
+      </div>
+    </section>
+
+    <!-- ==================== TAB 3: DATABASE BARANG ==================== -->
+    <section id="tab-database" class="tab-content hidden flex-1 flex flex-col gap-6">
+      <!-- Database Header Actions -->
+      <div class="bg-slate-900 rounded-2xl border border-slate-800 p-4 sm:p-6 flex flex-wrap items-center justify-between gap-4">
+        <div>
+          <h2 class="text-xl font-bold text-slate-100 flex items-center gap-2">
+            <i class="fa-solid fa-database text-cyan-400"></i>
+            Katalog Barang Terdaftar
+          </h2>
+          <p class="text-xs text-slate-400 mt-0.5">Daftar item terdaftar yang dapat dikenali kamera pemindai</p>
+        </div>
+
+        <div class="flex items-center gap-2 flex-wrap w-full sm:w-auto">
+          <!-- Search input -->
+          <div class="relative flex-1 sm:w-64">
+            <i class="fa-solid fa-magnifying-glass absolute left-3 top-2.5 text-xs text-slate-500"></i>
+            <input type="text" id="search-db" oninput="filterDatabase()" placeholder="Cari nama barang..." class="w-full bg-slate-950 border border-slate-700 rounded-xl pl-9 pr-3 py-1.5 text-xs text-slate-100 focus:outline-none focus:border-emerald-500">
+          </div>
+          <!-- Sample Data Loader -->
+          <button onclick="loadSampleData()" class="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold rounded-xl border border-slate-700 transition-colors flex items-center gap-1.5">
+            <i class="fa-solid fa-file-import text-amber-400"></i>
+            <span>Muat Sampel Data</span>
+          </button>
+          <!-- Clear All -->
+          <button onclick="clearAllDatabase()" class="px-3 py-1.5 bg-red-500/10 hover:bg-red-500/20 text-red-400 text-xs font-semibold rounded-xl border border-red-500/20 transition-colors flex items-center gap-1.5">
+            <i class="fa-solid fa-trash-can"></i>
+            <span>Hapus Semua</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Item Cards Grid -->
+      <div id="database-grid" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+        <!-- Rendered via JS -->
+      </div>
+    </section>
+
+  </main>
+
+  <!-- CANVASES FOR FEATURE EXTRACTION & CAMERA PROCESSING (HIDDEN) -->
+  <canvas id="hidden-process-canvas" class="hidden"></canvas>
+
+  <!-- NOTIFICATION TOAST CONTAINER -->
+  <div id="toast-container" class="fixed bottom-5 right-5 z-50 flex flex-col gap-2 pointer-events-none"></div>
+
+  <!-- SCRIPT ENGINE -->
+  <script>
+    /* ==================== GLOBAL APP STATE ==================== */
+    const APP_CONFIG = {
+      geminiApiKey: "", // Automatic runtime injection in environment
+      geminiModel: "gemini-3-flash-preview",
+      storageKey: "scanner_items_db_v1"
+    };
+
+    let appState = {
+      items: [],
+      activeTab: "scanner",
+      stream: null,
+      facingMode: "environment", // 'user' or 'environment'
+      currentDeviceId: null,
+      isScanningLoopActive: true,
+      scanIntervalId: null,
+      cooldownActive: false,
+      soundEnabled: true,
+      sensitivityThreshold: 70, // 50 to 95%
+      tempSnapshotBase64: null,
+      tempFingerprint: null,
+    };
+
+    /* Web Audio API Synthesizer */
+    let audioCtx = null;
+
+    /* ==================== INITIALIZATION ==================== */
+    window.addEventListener("DOMContentLoaded", () => {
+      initDatabase();
+      initCameraSystem();
+      setupAudioContext();
+      switchTab('scanner');
+    });
+
+    /* ==================== SOUND SYNTHESIZER (WEB AUDIO API) ==================== */
+    function setupAudioContext() {
+      try {
+        const AudioContext = window.AudioContext || window.webkitAudioContext;
+        audioCtx = new AudioContext();
+      } catch (e) {
+        console.warn("Web Audio API tidak didukung");
+      }
+    }
+
+    function toggleAudio() {
+      appState.soundEnabled = !appState.soundEnabled;
+      const soundIcon = document.getElementById("sound-icon");
+      if (appState.soundEnabled) {
+        soundIcon.className = "fa-solid fa-volume-high text-emerald-400";
+        showToast("Suara Pemindai Aktif", "info");
+      } else {
+        soundIcon.className = "fa-solid fa-volume-xmark text-slate-500";
+        showToast("Suara Pemindai Dibatilkan", "info");
+      }
+    }
+
+    function playScanChime() {
+      if (!appState.soundEnabled) return;
+      if (!audioCtx) setupAudioContext();
+      if (audioCtx.state === 'suspended') {
+        audioCtx.resume();
+      }
+
+      try {
+        // Futuristic Dual-tone Store POS Scanner Sound Effect
+        const now = audioCtx.currentTime;
+        
+        // Tone 1
+        const osc1 = audioCtx.createOscillator();
+        const gain1 = audioCtx.createGain();
+        osc1.type = 'sine';
+        osc1.frequency.setValueAtTime(1200, now);
+        osc1.frequency.exponentialRampToValueAtTime(1800, now + 0.1);
+        gain1.gain.setValueAtTime(0.3, now);
+        gain1.gain.exponentialRampToValueAtTime(0.001, now + 0.25);
+        
+        osc1.connect(gain1);
+        gain1.connect(audioCtx.destination);
+        osc1.start(now);
+        osc1.stop(now + 0.25);
+
+        // Tone 2 (Harmonic Cha-ching)
+        const osc2 = audioCtx.createOscillator();
+        const gain2 = audioCtx.createGain();
+        osc2.type = 'triangle';
+        osc2.frequency.setValueAtTime(2400, now + 0.08);
+        gain2.gain.setValueAtTime(0.2, now + 0.08);
+        gain2.gain.exponentialRampToValueAtTime(0.001, now + 0.35);
+
+        osc2.connect(gain2);
+        gain2.connect(audioCtx.destination);
+        osc2.start(now + 0.08);
+        osc2.stop(now + 0.35);
+      } catch (e) {
+        console.error("Gagal memainkan audio chime", e);
+      }
+    }
+
+    /* ==================== DATABASE MANAGEMENT (LOCALSTORAGE) ==================== */
+    function initDatabase() {
+      const stored = localStorage.getItem(APP_CONFIG.storageKey);
+      if (stored) {
+        try {
+          appState.items = JSON.parse(stored);
+        } catch (e) {
+          appState.items = [];
+        }
+      }
+      
+      // Auto populate samples if database is empty
+      if (appState.items.length === 0) {
+        loadSampleData();
+      } else {
+        updateDatabaseUI();
+      }
+    }
+
+    function saveDatabaseToStorage() {
+      localStorage.setItem(APP_CONFIG.storageKey, JSON.stringify(appState.items));
+      updateDatabaseUI();
+    }
+
+    function loadSampleData() {
+      // 3 Default sample items with generated colored canvas fingerprints
+      const sampleCanvas = document.createElement("canvas");
+      sampleCanvas.width = 120;
+      sampleCanvas.height = 120;
+      const ctx = sampleCanvas.getContext("2d");
+
+      // Item 1: Botol Minuman Stainless Blue
+      ctx.fillStyle = "#1e3a8a"; ctx.fillRect(0, 0, 120, 120);
+      ctx.fillStyle = "#3b82f6"; ctx.fillRect(35, 10, 50, 100);
+      const img1 = sampleCanvas.toDataURL("image/jpeg");
+      const fp1 = extractColorFingerprintFromCanvas(sampleCanvas);
+
+      // Item 2: Buku Catatan Hardcover Red
+      ctx.fillStyle = "#881337"; ctx.fillRect(0, 0, 120, 120);
+      ctx.fillStyle = "#f43f5e"; ctx.fillRect(20, 20, 80, 80);
+      const img2 = sampleCanvas.toDataURL("image/jpeg");
+      const fp2 = extractColorFingerprintFromCanvas(sampleCanvas);
+
+      // Item 3: Cangkir Kopi Keramik Green
+      ctx.fillStyle = "#064e3b"; ctx.fillRect(0, 0, 120, 120);
+      ctx.fillStyle = "#10b981"; ctx.arc(60, 60, 35, 0, Math.PI * 2); ctx.fill();
+      const img3 = sampleCanvas.toDataURL("image/jpeg");
+      const fp3 = extractColorFingerprintFromCanvas(sampleCanvas);
+
+      appState.items = [
+        {
+          id: "item_sample_1",
+          name: "Botol Minuman Stainless 500ml",
+          category: "Peralatan Rumah",
+          price: 85000,
+          description: "Botol minum warna biru metalik dengan penutup perak.",
+          image: img1,
+          fingerprint: fp1,
+          createdAt: new Date().toISOString()
+        },
+        {
+          id: "item_sample_2",
+          name: "Buku Catatan A5 Hardcover",
+          category: "Alat Tulis & Kantor",
+          price: 45000,
+          description: "Buku jurnal cover merah marun jilid benang.",
+          image: img2,
+          fingerprint: fp2,
+          createdAt: new Date().toISOString()
+        },
+        {
+          id: "item_sample_3",
+          name: "Cangkir Kopi Keramik Hijau",
+          category: "Dapur & Perabot",
+          price: 35000,
+          description: "Mug keramik hijau pastel kapasitas 300ml.",
+          image: img3,
+          fingerprint: fp3,
+          createdAt: new Date().toISOString()
+        }
+      ];
+
+      saveDatabaseToStorage();
+      showToast("Data sampel berhasil dimuat!", "success");
+    }
+
+    function clearAllDatabase() {
+      if (appState.items.length === 0) return;
+      appState.items = [];
+      saveDatabaseToStorage();
+      showToast("Seluruh database barang telah dihapus", "warning");
+    }
+
+    function deleteItem(id) {
+      appState.items = appState.items.filter(item => item.id !== id);
+      saveDatabaseToStorage();
+      showToast("Barang berhasil dihapus", "info");
+    }
+
+    function updateItemPrice(id, newPrice) {
+      const item = appState.items.find(i => i.id === id);
+      if (item) {
+        item.price = parseInt(newPrice) || 0;
+        saveDatabaseToStorage();
+        showToast(`Harga ${item.name} diperbarui!`, "success");
+      }
+    }
+
+    function updateDatabaseUI() {
+      // Update badge count
+      document.getElementById("db-count-badge").innerText = appState.items.length;
+
+      const grid = document.getElementById("database-grid");
+      if (appState.items.length === 0) {
+        grid.innerHTML = `
+          <div class="col-span-full text-center py-12 bg-slate-900 rounded-2xl border border-slate-800 p-6">
+            <i class="fa-solid fa-box-open text-4xl text-slate-600 mb-3"></i>
+            <h3 class="text-base font-bold text-slate-300">Database Kosong</h3>
+            <p class="text-xs text-slate-500 mt-1 mb-4">Belum ada barang terdaftar dalam katalog lokal.</p>
+            <button onclick="loadSampleData()" class="px-4 py-2 bg-emerald-500 hover:bg-emerald-400 text-slate-950 text-xs font-bold rounded-xl transition-all">
+              Muat Sampel Data Default
+            </button>
+          </div>
+        `;
+        return;
+      }
+
+      filterDatabase();
+    }
+
+    function filterDatabase() {
+      const query = (document.getElementById("search-db")?.value || "").toLowerCase();
+      const grid = document.getElementById("database-grid");
+      const filtered = appState.items.filter(i => 
+        i.name.toLowerCase().includes(query) || 
+        i.category.toLowerCase().includes(query)
+      );
+
+      if (filtered.length === 0) {
+        grid.innerHTML = `<div class="col-span-full text-center py-8 text-slate-500 text-xs">Tidak ditemukan barang sesuai kata kunci.</div>`;
+        return;
+      }
+
+      grid.innerHTML = filtered.map(item => `
+        <div class="bg-slate-900 rounded-2xl border border-slate-800 p-4 flex flex-col justify-between hover:border-slate-700 transition-all group">
+          <div>
+            <div class="relative aspect-video bg-slate-950 rounded-xl overflow-hidden mb-3 border border-slate-800">
+              <img src="${item.image}" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" alt="${item.name}">
+              <span class="absolute top-2 right-2 px-2 py-0.5 rounded-md bg-slate-900/80 text-[10px] text-slate-300 font-mono backdrop-blur-sm border border-slate-700">
+                ${item.category}
+              </span>
+            </div>
+            <h4 class="font-bold text-sm text-slate-200 line-clamp-1" title="${item.name}">${item.name}</h4>
+            <p class="text-xs text-slate-400 line-clamp-2 mt-1 min-h-[32px]">${item.description || 'Tidak ada deskripsi.'}</p>
+          </div>
+
+          <div class="mt-4 pt-3 border-t border-slate-800 flex items-center justify-between gap-2">
+            <div>
+              <span class="text-[10px] text-slate-500 uppercase font-mono block">Harga</span>
+              <div class="flex items-center gap-1">
+                <span class="text-xs font-bold text-emerald-400 font-mono">Rp</span>
+                <input type="number" value="${item.price}" onchange="updateItemPrice('${item.id}', this.value)" class="w-24 bg-slate-950 border border-slate-700 rounded-lg px-2 py-0.5 text-xs font-bold text-emerald-400 font-mono focus:outline-none focus:border-emerald-500">
+              </div>
+            </div>
+            
+            <button onclick="deleteItem('${item.id}')" class="p-2 text-slate-500 hover:text-red-400 hover:bg-red-500/10 rounded-lg transition-colors" title="Hapus Barang">
+              <i class="fa-solid fa-trash-can text-sm"></i>
+            </button>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    /* ==================== CAMERA & WEBRTC CONTROLLER ==================== */
+    async function initCameraSystem() {
+      try {
+        const devices = await navigator.mediaDevices.enumerateDevices();
+        const videoDevices = devices.filter(d => d.kind === 'videoinput');
+        const select = document.getElementById("camera-select");
+        select.innerHTML = "";
+
+        if (videoDevices.length === 0) {
+          select.innerHTML = `<option value="">Kamera tidak ditemukan</option>`;
+          return;
+        }
+
+        videoDevices.forEach((device, index) => {
+          const option = document.createElement("option");
+          option.value = device.deviceId;
+          option.text = device.label || `Kamera ${index + 1}`;
+          select.appendChild(option);
+        });
+
+        appState.currentDeviceId = videoDevices[0].deviceId;
+        startCamera();
+      } catch (err) {
+        console.error("Gagal mendapatkan perangkat kamera:", err);
+        updateCameraStatus(false, "Akses Kamera Ditolak / Tidak Ada");
+      }
+    }
+
+    async function startCamera() {
+      if (appState.stream) {
+        appState.stream.getTracks().forEach(track => track.stop());
+      }
+
+      const constraints = {
+        video: appState.currentDeviceId 
+          ? { deviceId: { exact: appState.currentDeviceId } } 
+          : { facingMode: appState.facingMode, width: { ideal: 1280 }, height: { ideal: 720 } }
+      };
+
+      try {
+        appState.stream = await navigator.mediaDevices.getUserMedia(constraints);
+        
+        // Wire to Scanner Video Element
+        const scannerVideo = document.getElementById("scanner-video");
+        scannerVideo.srcObject = appState.stream;
+        
+        // Wire to Register Video Element
+        const registerVideo = document.getElementById("register-video");
+        registerVideo.srcObject = appState.stream;
+
+        document.getElementById("camera-off-placeholder").classList.add("hidden");
+        updateCameraStatus(true, "Kamera Aktif");
+
+        // Start Auto Detection Loop
+        startAutoScannerLoop();
+
+      } catch (err) {
+        console.error("Gagal membuka kamera:", err);
+        document.getElementById("camera-off-placeholder").classList.remove("hidden");
+        updateCameraStatus(false, "Gagal Membuka Kamera");
+      }
+    }
+
+    function changeCamera() {
+      const select = document.getElementById("camera-select");
+      if (select.value) {
+        appState.currentDeviceId = select.value;
+        startCamera();
+      }
+    }
+
+    function flipCamera() {
+      appState.facingMode = (appState.facingMode === "user") ? "environment" : "user";
+      appState.currentDeviceId = null;
+      startCamera();
+    }
+
+    function updateCameraStatus(active, text) {
+      const dot = document.getElementById("status-dot");
+      const statusText = document.getElementById("status-text");
+      statusText.innerText = text;
+
+      if (active) {
+        dot.className = "w-2.5 h-2.5 rounded-full bg-emerald-500 shadow-[0_0_8px_#10b981]";
+      } else {
+        dot.className = "w-2.5 h-2.5 rounded-full bg-red-500";
+      }
+    }
+
+    /* ==================== CANVAS VISUAL FEATURE EXTRACTION ==================== */
+    // Extracts a spatial RGB grid fingerprint (4x4 matrix) + color distribution for fast visual similarity comparison
+    function extractColorFingerprintFromCanvas(canvas) {
+      const ctx = canvas.getContext("2d");
+      const width = canvas.width;
+      const height = canvas.height;
+      const imageData = ctx.getImageData(0, 0, width, height);
+      const data = imageData.data;
+
+      // Create a 4x4 spatial grid (16 zones), each storing average R, G, B
+      const gridSize = 4;
+      const cellWidth = Math.floor(width / gridSize);
+      const cellHeight = Math.floor(height / gridSize);
+      const gridFeatures = [];
+
+      for (let gy = 0; gy < gridSize; gy++) {
+        for (let gx = 0; gx < gridSize; gx++) {
+          let sumR = 0, sumG = 0, sumB = 0, count = 0;
+
+          for (let y = gy * cellHeight; y < (gy + 1) * cellHeight; y += 2) {
+            for (let x = gx * cellWidth; x < (gx + 1) * cellWidth; x += 2) {
+              const idx = (y * width + x) * 4;
+              sumR += data[idx];
+              sumG += data[idx + 1];
+              sumB += data[idx + 2];
+              count++;
+            }
+          }
+
+          gridFeatures.push(
+            Math.round(sumR / count),
+            Math.round(sumG / count),
+            Math.round(sumB / count)
+          );
+        }
+      }
+
+      return gridFeatures; // Array of 48 values (16 cells * 3 channels)
+    }
+
+    // Calculates visual similarity index (0% to 100%) between live frame fingerprint and saved item fingerprint
+    function calculateSimilarity(fp1, fp2) {
+      if (!fp1 || !fp2 || fp1.length !== fp2.length) return 0;
+
+      let totalDiff = 0;
+      const maxDiff = fp1.length * 255;
+
+      for (let i = 0; i < fp1.length; i++) {
+        totalDiff += Math.abs(fp1[i] - fp2[i]);
+      }
+
+      const similarityNormalized = 1 - (totalDiff / maxDiff);
+      // Scale non-linearly to accentuate match differences
+      const score = Math.max(0, Math.min(100, Math.round(similarityNormalized * 100)));
+      return score;
+    }
+
+    /* ==================== REAL-TIME AUTOMATIC SCANNER LOOP ==================== */
+    function startAutoScannerLoop() {
+      if (appState.scanIntervalId) clearInterval(appState.scanIntervalId);
+      
+      // Run scanner check every 600ms
+      appState.scanIntervalId = setInterval(() => {
+        if (appState.isScanningLoopActive && appState.activeTab === "scanner" && !appState.cooldownActive) {
+          performFrameScanning();
+        }
+      }, 600);
+    }
+
+    function toggleScannerLoop() {
+      appState.isScanningLoopActive = !appState.isScanningLoopActive;
+      const btnText = document.getElementById("loop-btn-text");
+      const btnIcon = document.getElementById("loop-btn-icon");
+
+      if (appState.isScanningLoopActive) {
+        btnText.innerText = "Jeda Pemindaian";
+        btnIcon.className = "fa-solid fa-pause text-emerald-400";
+        showToast("Pemindaian Otomatis Diaktifkan", "info");
+      } else {
+        btnText.innerText = "Lanjutkan Pemindaian";
+        btnIcon.className = "fa-solid fa-play text-emerald-400";
+        showToast("Pemindaian Otomatis Dijeda", "warning");
+      }
+    }
+
+    function updateSensitivity(val) {
+      appState.sensitivityThreshold = parseInt(val);
+      document.getElementById("sensitivity-value").innerText = val + "%";
+    }
+
+    function performFrameScanning() {
+      const video = document.getElementById("scanner-video");
+      if (!video || video.readyState !== 4 || appState.items.length === 0) return;
+
+      // Capture frame onto hidden canvas
+      const processCanvas = document.getElementById("hidden-process-canvas");
+      processCanvas.width = 160;
+      processCanvas.height = 160;
+      const ctx = processCanvas.getContext("2d");
+
+      // Draw center ROI (Region of Interest)
+      const vWidth = video.videoWidth;
+      const vHeight = video.videoHeight;
+      const roiSize = Math.min(vWidth, vHeight) * 0.7;
+      const startX = (vWidth - roiSize) / 2;
+      const startY = (vHeight - roiSize) / 2;
+
+      ctx.drawImage(video, startX, startY, roiSize, roiSize, 0, 0, 160, 160);
+
+      // Extract current live feature fingerprint
+      const liveFingerprint = extractColorFingerprintFromCanvas(processCanvas);
+
+      // Search best match from database
+      let bestMatchItem = null;
+      let highestScore = 0;
+
+      for (const item of appState.items) {
+        if (item.fingerprint) {
+          const score = calculateSimilarity(liveFingerprint, item.fingerprint);
+          if (score > highestScore) {
+            highestScore = score;
+            bestMatchItem = item;
+          }
+        }
+      }
+
+      // Check if highest score passes user sensitivity threshold
+      if (highestScore >= appState.sensitivityThreshold && bestMatchItem) {
+        triggerDetectionMatch(bestMatchItem, highestScore);
+      }
+    }
+
+    function triggerManualScan() {
+      const video = document.getElementById("scanner-video");
+      if (!video || video.readyState !== 4) {
+        showToast("Kamera belum siap!", "warning");
+        return;
+      }
+
+      performFrameScanning();
+      
+      // If no match found after manual trigger, notify user
+      if (appState.cooldownActive === false) {
+        showToast("Tidak ada barang yang terdeteksi cocok dalam database.", "info");
+      }
+    }
+
+    function triggerDetectionMatch(item, score) {
+      appState.cooldownActive = true;
+
+      // Play Sound Chime
+      playScanChime();
+
+      // Trigger UI HUD Pulse
+      const targetBox = document.getElementById("target-box");
+      targetBox.classList.add("border-emerald-400", "glow-box-green");
+
+      // Populate GIANT PRICE overlay modal
+      document.getElementById("detected-item-name").innerText = item.name;
+      document.getElementById("detected-item-category").innerText = item.category;
+      document.getElementById("detected-item-price").innerText = "Rp " + item.price.toLocaleString("id-ID");
+      document.getElementById("match-score").innerText = score + "%";
+      document.getElementById("detected-time").innerText = "Waktu: " + new Date().toLocaleTimeString("id-ID");
+
+      // Reveal Giant Modal
+      const modal = document.getElementById("giant-price-modal");
+      modal.classList.remove("hidden", "opacity-0", "scale-95", "pointer-events-none");
+      modal.classList.add("opacity-100", "scale-100");
+
+      // Log to Scan History Stream
+      addScanLogEntry(item, score);
+
+      // Remove highlight after 2s
+      setTimeout(() => {
+        targetBox.classList.remove("border-emerald-400", "glow-box-green");
+      }, 2000);
+    }
+
+    function dismissPriceModal() {
+      const modal = document.getElementById("giant-price-modal");
+      modal.classList.add("opacity-0", "scale-95", "pointer-events-none");
+
+      // Cooldown 3.5 seconds before next detection trigger to prevent continuous popups
+      setTimeout(() => {
+        appState.cooldownActive = false;
+      }, 3500);
+    }
+
+    function addScanLogEntry(item, score) {
+      const container = document.getElementById("scan-log-container");
+      
+      // Clear empty state if present
+      if (container.children.length === 1 && container.children[0].innerText.includes("Belum ada barang")) {
+        container.innerHTML = "";
+      }
+
+      const logItem = document.createElement("div");
+      logItem.className = "p-2.5 bg-slate-950/90 rounded-xl border border-slate-800 flex items-center justify-between text-xs animate-bounce-short";
+      logItem.innerHTML = `
+        <div class="flex items-center gap-2.5 overflow-hidden">
+          <img src="${item.image}" class="w-9 h-9 rounded-lg object-cover border border-slate-700" alt="Thumb">
+          <div class="truncate">
+            <h5 class="font-bold text-slate-200 truncate">${item.name}</h5>
+            <span class="text-[10px] font-mono text-emerald-400 font-bold">Rp ${item.price.toLocaleString("id-ID")}</span>
+          </div>
+        </div>
+        <div class="text-right flex flex-col items-end">
+          <span class="px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 text-[10px] font-mono">${score}% Match</span>
+          <span class="text-[9px] text-slate-500 font-mono mt-0.5">${new Date().toLocaleTimeString("id-ID")}</span>
+        </div>
+      `;
+
+      container.insertBefore(logItem, container.firstChild);
+    }
+
+    function clearScanLogs() {
+      const container = document.getElementById("scan-log-container");
+      container.innerHTML = `
+        <div class="text-center py-8 text-slate-500 text-xs italic">
+          Belum ada barang yang terdeteksi. Silakan arahkan kamera ke barang terdaftar.
+        </div>
+      `;
+    }
+
+    /* ==================== TAB 2: REGISTER ITEM & GEMINI VISION AI ==================== */
+    function takeRegisterSnapshot() {
+      const video = document.getElementById("scanner-video");
+      if (!video || video.readyState !== 4) {
+        showToast("Kamera tidak siap untuk foto!", "warning");
+        return;
+      }
+
+      const canvas = document.createElement("canvas");
+      canvas.width = 640;
+      canvas.height = 640;
+      const ctx = canvas.getContext("2d");
+
+      // Draw square crop from video
+      const vW = video.videoWidth;
+      const vH = video.videoHeight;
+      const size = Math.min(vW, vH);
+      ctx.drawImage(video, (vW - size)/2, (vH - size)/2, size, size, 0, 0, 640, 640);
+
+      const base64Img = canvas.toDataURL("image/jpeg", 0.85);
+      
+      // Compute fingerprint
+      appState.tempFingerprint = extractColorFingerprintFromCanvas(canvas);
+      appState.tempSnapshotBase64 = base64Img;
+
+      // Update Preview UI
+      const previewImg = document.getElementById("register-preview-img");
+      previewImg.src = base64Img;
+      previewImg.classList.remove("hidden");
+      document.getElementById("register-placeholder").classList.add("hidden");
+
+      showToast("Foto berhasil diambil. Memulai analisis AI...", "info");
+
+      // Call Gemini AI Vision
+      analyzeImageWithGemini(base64Img);
+    }
+
+    function handleFileUpload(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        const img = new Image();
+        img.onload = function() {
+          const canvas = document.createElement("canvas");
+          canvas.width = 640;
+          canvas.height = 640;
+          const ctx = canvas.getContext("2d");
+          ctx.drawImage(img, 0, 0, 640, 640);
+
+          const base64Img = canvas.toDataURL("image/jpeg", 0.85);
+          appState.tempFingerprint = extractColorFingerprintFromCanvas(canvas);
+          appState.tempSnapshotBase64 = base64Img;
+
+          // UI Update
+          const previewImg = document.getElementById("register-preview-img");
+          previewImg.src = base64Img;
+          previewImg.classList.remove("hidden");
+          document.getElementById("register-placeholder").classList.add("hidden");
+
+          analyzeImageWithGemini(base64Img);
+        }
+        img.src = e.target.result;
+      };
+      reader.readAsDataURL(file);
+    }
+
+    async function analyzeImageWithGemini(base64Image) {
+      const loadingOverlay = document.getElementById("ai-loading-overlay");
+      loadingOverlay.classList.remove("hidden");
+      loadingOverlay.classList.add("flex");
+
+      const cleanBase64 = base64Image.replace(/^data:image\/(png|jpeg|jpg);base64,/, "");
+
+      const promptSystem = "Identifikasi objek pada foto ini. Berikan output JSON valid tanpa format markdown tambahan. " +
+        "Properti JSON wajib: 'name' (Nama barang spesifik Bahasa Indonesia), 'category' (Kategori singkat), " +
+        "'estimatedPrice' (Estimasi harga pasaran umum angka integer Rupiah saja tanpa titik/koma), 'description' (Deskripsi visual 1 kalimat).";
+
+      const payload = {
+        contents: [{
+          parts: [
+            { text: promptSystem },
+            {
+              inlineData: {
+                mimeType: "image/jpeg",
+                data: cleanBase64
+              }
+            }
+          ]
+        }],
+        generationConfig: {
+          responseMimeType: "application/json"
+        }
+      };
+
+      const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${APP_CONFIG.geminiModel}:generateContent?key=${APP_CONFIG.geminiApiKey}`;
+
+      try {
+        const response = await fetch(apiUrl, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload)
+        });
+
+        if (!response.ok) {
+          throw new Error(`HTTP Error ${response.status}`);
+        }
+
+        const data = await response.json();
+        const jsonText = data.candidates?.[0]?.content?.parts?.[0]?.text;
+
+        if (jsonText) {
+          const parsed = JSON.parse(jsonText);
+          
+          // Populate Form
+          document.getElementById("item-name").value = parsed.name || "";
+          document.getElementById("item-category").value = parsed.category || "Umum";
+          document.getElementById("item-price").value = parsed.estimatedPrice || 50000;
+          document.getElementById("item-desc").value = parsed.description || "";
+          
+          document.getElementById("ai-price-hint").innerText = `💡 AI merekomendasikan estimasi harga Rp ${(parsed.estimatedPrice || 0).toLocaleString('id-ID')}`;
+          
+          // Enable Save Button
+          document.getElementById("save-btn").disabled = false;
+
+          showToast("AI Berhasil mengidentifikasi barang!", "success");
+        } else {
+          throw new Error("Respon AI tidak valid");
+        }
+
+      } catch (err) {
+        console.error("Gagal memanggil Gemini Vision API:", err);
+        showToast("AI gagal mengenali otomatis. Silakan isi form manual.", "warning");
+        
+        // Fallback: Allow manual completion
+        document.getElementById("save-btn").disabled = false;
+        document.getElementById("ai-price-hint").innerText = "Isi nama & harga barang secara manual.";
+      } finally {
+        loadingOverlay.classList.add("hidden");
+        loadingOverlay.classList.remove("flex");
+      }
+    }
+
+    function saveItemToDatabase(event) {
+      event.preventDefault();
+
+      if (!appState.tempSnapshotBase64) {
+        showToast("Silakan ambil foto barang terlebih dahulu!", "warning");
+        return;
+      }
+
+      const name = document.getElementById("item-name").value.trim();
+      const category = document.getElementById("item-category").value.trim();
+      const price = parseInt(document.getElementById("item-price").value) || 0;
+      const desc = document.getElementById("item-desc").value.trim();
+
+      const newItem = {
+        id: "item_" + Date.now(),
+        name: name,
+        category: category,
+        price: price,
+        description: desc,
+        image: appState.tempSnapshotBase64,
+        fingerprint: appState.tempFingerprint,
+        createdAt: new Date().toISOString()
+      };
+
+      appState.items.unshift(newItem);
+      saveDatabaseToStorage();
+
+      showToast(`'${name}' berhasil disimpan ke database!`, "success");
+
+      // Reset Form State
+      document.getElementById("register-form").reset();
+      document.getElementById("register-preview-img").classList.add("hidden");
+      document.getElementById("register-placeholder").classList.remove("hidden");
+      document.getElementById("save-btn").disabled = true;
+      appState.tempSnapshotBase64 = null;
+      appState.tempFingerprint = null;
+
+      // Switch to Catalog Tab to display result
+      switchTab('database');
+    }
+
+    /* ==================== UI & NAVIGATION HELPERS ==================== */
+    function switchTab(tabId) {
+      appState.activeTab = tabId;
+
+      // Update Navigation Buttons Style
+      document.querySelectorAll(".tab-btn").forEach(btn => {
+        btn.className = "tab-btn flex items-center gap-2 px-4 py-2 rounded-lg font-medium text-sm transition-all text-slate-400 hover:text-slate-200 hover:bg-slate-800";
+      });
+
+      const activeBtn = document.getElementById(`tab-btn-${tabId}`);
+      if (activeBtn) {
+        activeBtn.className = "tab-btn flex items-center gap-2 px-4 py-2 rounded-lg font-medium text-sm transition-all bg-emerald-500/10 text-emerald-400 border border-emerald-500/30";
+      }
+
+      // Hide all contents
+      document.querySelectorAll(".tab-content").forEach(content => {
+        content.classList.add("hidden");
+      });
+
+      // Show Selected Content
+      document.getElementById(`tab-${tabId}`).classList.remove("hidden");
+
+      // Tab specific logic
+      if (tabId === "scanner") {
+        appState.isScanningLoopActive = true;
+      } else {
+        appState.isScanningLoopActive = false;
+      }
+    }
+
+    function showToast(message, type = "info") {
+      const container = document.getElementById("toast-container");
+      
+      const toast = document.createElement("div");
+      let bgBorder = "bg-slate-900/90 border-slate-700 text-slate-200";
+      let icon = '<i class="fa-solid fa-circle-info text-cyan-400"></i>';
+
+      if (type === "success") {
+        bgBorder = "bg-slate-900/95 border-emerald-500/50 text-emerald-300 glow-box-green";
+        icon = '<i class="fa-solid fa-circle-check text-emerald-400"></i>';
+      } else if (type === "warning") {
+        bgBorder = "bg-slate-900/95 border-amber-500/50 text-amber-300";
+        icon = '<i class="fa-solid fa-triangle-exclamation text-amber-400"></i>';
+      }
+
+      toast.className = `p-3.5 rounded-xl border backdrop-blur-md text-xs font-semibold shadow-xl flex items-center gap-2.5 transition-all duration-300 transform translate-y-2 opacity-0 ${bgBorder} pointer-events-auto max-w-xs`;
+      toast.innerHTML = `${icon} <span>${message}</span>`;
+
+      container.appendChild(toast);
+
+      // Animate In
+      setTimeout(() => {
+        toast.classList.remove("translate-y-2", "opacity-0");
+      }, 10);
+
+      // Dismiss after 3s
+      setTimeout(() => {
+        toast.classList.add("opacity-0", "translate-y-2");
+        setTimeout(() => toast.remove(), 300);
+      }, 3000);
+    }
+  </script>
+</body>
+</html>
